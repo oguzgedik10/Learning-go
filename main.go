@@ -3,42 +3,41 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sync"
+	"time"
 )
 
 type Islem struct {
-	ID        int
-	Kullanıcı int
-	Miktar    float64
-	Durum     string
+	ID     int
+	Miktar float64
+	Durum  string
 }
 
-func veriUret(id int) Islem {
-	rasgeleMiktar := 100 + rand.Float64()*(5000-100)
+func veriUret(id int, wg *sync.WaitGroup) {
+	defer wg.Done() // iş bitince bitirdim mesaji gönderir
+
+	miktar := 100 + rand.Float64()*(5000-100)
 	durum := "Başarılı"
 
-	if rand.Float64() < 0.05 { // %5 oranında şüpheli işlem
-		durum = "Supheli"
+	if rand.Float64() <= 0.1 {
+		durum = "Şüpheli"
 	}
 
-	return Islem{
-		ID:        id,
-		Kullanıcı: rand.Intn(1000),
-		Miktar:    rasgeleMiktar,
-		Durum:     durum,
-	}
+	time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond) //gecikme
+
+	fmt.Printf("ID: %d | Miktar: %.2f | Durum: %s\n", id, miktar, durum)
 }
 
 func main() {
-	fmt.Println("Veri üretimi başlıyor...")
+	var wg sync.WaitGroup
 
-	for i := 1; i <= 10; i++ {
-		islem := veriUret(i)
-		fmt.Printf(
-			"ID: %-2d | Kullanıcı: %-3d | Miktar: %8.2f | Durum: %s\n",
-			islem.ID,
-			islem.Kullanıcı,
-			islem.Miktar,
-			islem.Durum,
-		)
+	fmt.Println("Eşzamanlı üretim hattı başlatıldı...")
+
+	for i := 1; i <= 50; i++ {
+		wg.Add(1)           // Yeni bir işçi yola çıkıyor
+		go veriUret(i, &wg) // Başına 'go' koyduk, artık arka planda çalışıyor
 	}
+
+	wg.Wait() // Tüm işçiler (50 tane) 'Done' diyene kadar bekle
+	fmt.Println("Tüm işlemler tamamlandı.")
 }
