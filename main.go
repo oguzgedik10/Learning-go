@@ -7,38 +7,42 @@ import (
 )
 
 type Islem struct {
-	ID     int
-	Miktar float64
-	Durum  string
+	ID    int
+	Durum string
 }
 
-func isci(id int, ch chan Islem) {
-	miktar := 100 + rand.Float64()*(5000-100)
-	durum := "Basarili"
-	if rand.Float64() < 0.1 {
-		durum = "Supheli"
-	}
+func isci(id int, bant chan Islem) {
+	// Her işçi rastgele bir sürede işini bitirsin (0-5 saniye arası)
+	// Bazen çok yavaş kalabilirler
+	gecikme := time.Duration(rand.Intn(5000)) * time.Millisecond
+	time.Sleep(gecikme)
 
-	time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
-
-	ch <- Islem{ID: id, Miktar: miktar, Durum: durum}
+	bant <- Islem{ID: id, Durum: "Tamamlandi"}
 }
 
 func main() {
-	islemKanali := make(chan Islem)
+	rand.Seed(time.Now().UnixNano())
+	islemBandı := make(chan Islem)
 
-	fmt.Println("Sistem başlatılıyor...")
+	fmt.Println("Sistem başlatıldı. 10 işlem bekleniyor...")
 
 	for i := 1; i <= 10; i++ {
-		go isci(i, islemKanali)
+		go isci(i, islemBandı)
 	}
 
-	fmt.Println("İşlemler bekleniyor...")
-
 	for i := 1; i <= 10; i++ {
-		gelenVeri := <-islemKanali
-		fmt.Printf("İşlem Alındı - ID: %d | Tutar: %.2f | Durum: %s\n",
-			gelenVeri.ID, gelenVeri.Miktar, gelenVeri.Durum)
+		// select ifadesi ile aynı anda birden fazla kanal operasyonu dinlenir:
+		// 1. İşlem bandından gelen veri
+		// 2. Belirlenen zaman aşımı süresinin dolması
+		select {
+		case veri := <-islemBandı:
+			fmt.Printf("İşlem verisi alındı: ID %d\n", veri.ID)
+
+		case <-time.After(3 * time.Second):
+			// Eğer 3 saniye içinde işlem bandından veri gelmezse zaman aşımı tetiklenir.
+			fmt.Println("HATA: İşlem hattı zaman aşımına uğradı, sistem sonlandırılıyor!")
+			return // Programı tamamen kapat
+		}
 	}
 
 	fmt.Println("Tüm işlemler başarıyla tamamlandı.")
