@@ -21,7 +21,6 @@ func isci(id int, bant chan Islem) {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	islemBandı := make(chan Islem)
 
 	fmt.Println("Sistem başlatıldı. 10 işlem bekleniyor...")
@@ -41,8 +40,9 @@ func main() {
 		case <-time.After(3 * time.Second):
 			// Eğer 3 saniye içinde işlem bandından veri gelmezse zaman aşımı tetiklenir.
 			fmt.Println("HATA: İşlem hattı zaman aşımına uğradı, sistem sonlandırılıyor!")
-			return // Programı tamamen kapat
+			return
 		}
+
 	}
 
 	fmt.Println("Tüm işlemler başarıyla tamamlandı.")
